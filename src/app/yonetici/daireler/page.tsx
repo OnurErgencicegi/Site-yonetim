@@ -16,7 +16,7 @@ export default async function DairelerSayfasi() {
     .from("siteler")
     .select("id")
     .eq("yonetici_id", user!.id)
-    .single();
+    .maybeSingle();
 
   if (!site) return null;
 

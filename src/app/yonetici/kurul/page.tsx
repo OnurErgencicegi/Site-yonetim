@@ -15,7 +15,7 @@ export default async function KurulSayfasi() {
     .from("siteler")
     .select("id")
     .eq("yonetici_id", user!.id)
-    .single();
+    .maybeSingle();
 
   if (!site) return null;
 

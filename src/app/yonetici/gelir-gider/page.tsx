@@ -14,7 +14,7 @@ export default async function GelirGiderSayfasi() {
     .from("siteler")
     .select("id")
     .eq("yonetici_id", user!.id)
-    .single();
+    .maybeSingle();
 
   if (!site) return null;
 

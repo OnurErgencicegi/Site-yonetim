@@ -15,7 +15,7 @@ async function siteIdGetir() {
     .from("siteler")
     .select("id, ad")
     .eq("yonetici_id", user!.id)
-    .single();
+    .maybeSingle();
   return site;
 }
 

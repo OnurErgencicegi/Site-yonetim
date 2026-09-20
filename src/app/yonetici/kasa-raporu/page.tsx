@@ -14,7 +14,7 @@ export default async function KasaRaporuSayfasi() {
     .from("siteler")
     .select("id")
     .eq("yonetici_id", user!.id)
-    .single();
+    .maybeSingle();
 
   if (!site) return null;
 
