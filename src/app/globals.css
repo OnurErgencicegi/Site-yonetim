@@ -1,0 +1,66 @@
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+:root {
+  --murekkep: #1B2A33;      /* koyu lacivert - yan menü, başlıklar */
+  --murekkep-2: #243844;
+  --camur-yesil: #3B6E62;   /* ana vurgu rengi */
+  --camur-yesil-koyu: #2C5148;
+  --kagit: #F6F5F1;         /* içerik zemini */
+  --kagit-panel: #FFFFFF;
+  --kagit-cizgi: #E4E1D8;
+  --uyari-kirmizi: #A83A32;
+  --uyari-kirmizi-zemin: #FBEDEB;
+  --basari-yesil: #3B6E62;
+  --basari-yesil-zemin: #EAF1EE;
+  --bekleme-amber: #97662A;
+  --bekleme-amber-zemin: #FBF1E3;
+  --metin-ana: #1B2A33;
+  --metin-ikincil: #5C6B66;
+}
+
+body {
+  background: var(--kagit);
+  color: var(--metin-ana);
+  font-family: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+}
+
+.font-baslik {
+  font-family: 'Source Serif 4', Georgia, serif;
+}
+
+::selection {
+  background: var(--camur-yesil);
+  color: white;
+}
+
+/* Odak halkası - klavye erişilebilirliği */
+:focus-visible {
+  outline: 2px solid var(--camur-yesil);
+  outline-offset: 2px;
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
