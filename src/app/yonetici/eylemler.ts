@@ -40,39 +40,22 @@ export async function katVeDairelerEkle(
 
 // --- Sakin Onay Kuyruğu ---
 
-export async function sakinOnayla(sakinId: string) {
+// --- Sakin Değişiklik Talepleri ---
+
+export async function talepOnayla(talepId: string) {
   const supabase = await supabaseSunucu();
-  const { data: sakin, error: getHata } = await supabase
-    .from("daire_sakinleri")
-    .select("bekleyen_degisiklikler")
-    .eq("id", sakinId)
-    .single();
-  if (getHata) throw new Error(getHata.message);
-
-  const guncel: Record<string, unknown> = {
-    onay_durumu: "onaylandi",
-    bekleyen_degisiklikler: null,
-  };
-
-  // Bekleyen değişiklikler varsa ana alanlara işle
-  if (sakin?.bekleyen_degisiklikler) {
-    Object.assign(guncel, sakin.bekleyen_degisiklikler);
-    guncel.onay_durumu = "onaylandi";
-    guncel.bekleyen_degisiklikler = null;
-  }
-
-  const { error } = await supabase.from("daire_sakinleri").update(guncel).eq("id", sakinId);
+  const { error } = await supabase.rpc("talep_onayla", { p_talep_id: talepId });
   if (error) throw new Error(error.message);
   revalidatePath("/yonetici/onay-kuyrugu");
   revalidatePath("/yonetici/daireler");
 }
 
-export async function sakinReddet(sakinId: string) {
+export async function talepReddet(talepId: string, redNedeni?: string) {
   const supabase = await supabaseSunucu();
-  const { error } = await supabase
-    .from("daire_sakinleri")
-    .update({ onay_durumu: "reddedildi", bekleyen_degisiklikler: null })
-    .eq("id", sakinId);
+  const { error } = await supabase.rpc("talep_reddet", {
+    p_talep_id: talepId,
+    p_red_nedeni: redNedeni ?? null,
+  });
   if (error) throw new Error(error.message);
   revalidatePath("/yonetici/onay-kuyrugu");
 }

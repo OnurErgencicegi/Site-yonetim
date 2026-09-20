@@ -2,15 +2,15 @@
 
 import { useState } from "react";
 import { Check, X } from "lucide-react";
-import { sakinOnayla, sakinReddet } from "@/app/yonetici/eylemler";
+import { talepOnayla, talepReddet } from "@/app/yonetici/eylemler";
 
-export default function OnayButonlari({ sakinId }: { sakinId: string }) {
+export default function OnayButonlari({ talepId }: { talepId: string }) {
   const [isleniyor, setIsleniyor] = useState(false);
 
   async function calistir(fn: (id: string) => Promise<void>) {
     setIsleniyor(true);
     try {
-      await fn(sakinId);
+      await fn(talepId);
     } finally {
       setIsleniyor(false);
     }
@@ -20,7 +20,7 @@ export default function OnayButonlari({ sakinId }: { sakinId: string }) {
     <div className="flex items-center gap-1.5">
       <button
         disabled={isleniyor}
-        onClick={() => calistir(sakinOnayla)}
+        onClick={() => calistir(talepOnayla)}
         className="rounded-md p-2 text-white disabled:opacity-50"
         style={{ background: "var(--camur-yesil)" }}
         title="Onayla"
@@ -29,7 +29,7 @@ export default function OnayButonlari({ sakinId }: { sakinId: string }) {
       </button>
       <button
         disabled={isleniyor}
-        onClick={() => calistir(sakinReddet)}
+        onClick={() => calistir(talepReddet)}
         className="rounded-md p-2 border disabled:opacity-50"
         style={{ borderColor: "var(--kagit-cizgi)", color: "var(--uyari-kirmizi)" }}
         title="Reddet"
