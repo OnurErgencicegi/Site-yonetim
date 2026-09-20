@@ -1,90 +1,68 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
+import { BlockFormCikti } from "@/types/onboarding";
 
 interface BlockFormProps {
-  blockCount: number;
-  onSubmit: (data: any) => void;
+  blokSayisi: number;
+  onSubmit: (data: BlockFormCikti) => void;
   onBack: () => void;
 }
 
-export default function BlockForm({
-  blockCount,
-  onSubmit,
-  onBack,
-}: BlockFormProps) {
-  const [blocks, setBlocks] = useState<{ name: string }[]>(
-    Array.from({ length: blockCount }, () => ({ name: '' }))
+export default function BlockForm({ blokSayisi, onSubmit, onBack }: BlockFormProps) {
+  const [bloklar, setBloklar] = useState<{ ad: string }[]>(
+    Array.from({ length: blokSayisi }, () => ({ ad: "" }))
   );
-  const [errors, setErrors] = useState<Record<number, string>>({});
+  const [hatalar, setHatalar] = useState<Record<number, string>>({});
 
-  const validate = () => {
-    const newErrors: Record<number, string> = {};
-
-    blocks.forEach((block, idx) => {
-      if (!block.name.trim()) {
-        newErrors[idx] = `${String.fromCharCode(65 + idx)} Blok adı zorunlu`;
-      }
+  function dogrula() {
+    const yeni: Record<number, string> = {};
+    bloklar.forEach((blok, i) => {
+      if (!blok.ad.trim()) yeni[i] = `${String.fromCharCode(65 + i)} Blok adı zorunlu`;
     });
+    setHatalar(yeni);
+    return Object.keys(yeni).length === 0;
+  }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  function gonder(e: React.FormEvent) {
     e.preventDefault();
-    if (validate()) {
-      onSubmit({ blocks });
-    }
-  };
+    if (dogrula()) onSubmit({ bloklar });
+  }
 
-  const handleBlockNameChange = (index: number, value: string) => {
-    const newBlocks = [...blocks];
-    newBlocks[index].name = value;
-    setBlocks(newBlocks);
-
-    // Clear error for this field when user starts typing
-    const newErrors = { ...errors };
-    delete newErrors[index];
-    setErrors(newErrors);
-  };
+  function adDegistir(i: number, deger: string) {
+    const yeni = [...bloklar];
+    yeni[i] = { ad: deger };
+    setBloklar(yeni);
+    const yeniHatalar = { ...hatalar };
+    delete yeniHatalar[i];
+    setHatalar(yeniHatalar);
+  }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <h2 className="text-3xl font-bold text-gray-900 mb-8">
-        Blok Adlarını Girin
-      </h2>
-
-      <p className="text-gray-600 mb-6">
-        Toplam {blockCount} blok için adlar belirleyin.
-      </p>
+    <form onSubmit={gonder} className="space-y-6">
+      <h2 className="text-3xl font-bold text-gray-900 mb-8">Blok Adlarını Girin</h2>
+      <p className="text-gray-600 mb-6">Toplam {blokSayisi} blok için ad belirleyin.</p>
 
       <div className="space-y-4">
-        {blocks.map((block, idx) => (
-          <div key={idx}>
+        {bloklar.map((blok, i) => (
+          <div key={i}>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              {String.fromCharCode(65 + idx)} Blok Adı{' '}
-              <span className="text-red-500">*</span>
+              {String.fromCharCode(65 + i)} Blok Adı <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
-              value={block.name}
-              onChange={(e) =>
-                handleBlockNameChange(idx, e.target.value)
-              }
-              placeholder={`Örn: ${String.fromCharCode(65 + idx)} Blok`}
+              value={blok.ad}
+              onChange={(e) => adDegistir(i, e.target.value)}
+              placeholder={`Örn: ${String.fromCharCode(65 + i)} Blok`}
               className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 ${
-                errors[idx] ? 'border-red-500' : 'border-gray-300'
+                hatalar[i] ? "border-red-500" : "border-gray-300"
               }`}
             />
-            {errors[idx] && (
-              <p className="text-red-500 text-sm mt-1">{errors[idx]}</p>
-            )}
+            {hatalar[i] && <p className="text-red-500 text-sm mt-1">{hatalar[i]}</p>}
           </div>
         ))}
       </div>
 
-      {/* Buttons */}
       <div className="flex gap-4 pt-4">
         <button
           type="button"

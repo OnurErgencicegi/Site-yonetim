@@ -1,226 +1,157 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { supabaseTarayici } from '@/lib/supabase/client';
-import SiteForm from './steps/SiteForm';
-import BlockForm from './steps/BlockForm';
-import FloorForm from './steps/FloorForm';
-import ApartmentForm from './steps/ApartmentForm';
-import { OnboardingData } from '@/types/onboarding';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabaseTarayici } from "@/lib/supabase/client";
+import SiteForm from "./steps/SiteForm";
+import BlockForm from "./steps/BlockForm";
+import FloorForm from "./steps/FloorForm";
+import ApartmentForm from "./steps/ApartmentForm";
+import {
+  OnboardingData,
+  SiteFormCikti,
+  BlockFormCikti,
+  FloorFormCikti,
+  katListesiOlustur,
+} from "@/types/onboarding";
 
-type Step = 'site' | 'blocks' | 'floors' | 'apartments';
+type Adim = "site" | "bloklar" | "katlar" | "daireler";
 
 export default function OnboardingWizard() {
-  const [currentStep, setCurrentStep] = useState<Step>('site');
-  const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<Partial<OnboardingData>>({
-    bloks: [],
-  });
+  const router = useRouter();
+  const [adim, setAdim] = useState<Adim>("site");
+  const [yukleniyor, setYukleniyor] = useState(false);
+  const [hata, setHata] = useState<string>();
+  const [veri, setVeri] = useState<Partial<OnboardingData>>({ bloklar: [] });
 
-  const handleSiteSubmit = (siteData: any) => {
-    setData({
-      ...data,
-      siteName: siteData.siteName,
-      il: siteData.il,
-      ilce: siteData.ilce,
-      adres: siteData.adres,
-      bloks: Array.from({ length: siteData.blockCount }, () => ({
-        name: '',
-        floors: 0,
-        apartments: [],
+  function siteGonderildi(cikti: SiteFormCikti) {
+    setVeri({
+      siteAdi: cikti.siteAdi,
+      il: cikti.il,
+      ilce: cikti.ilce,
+      adres: cikti.adres,
+      bloklar: Array.from({ length: cikti.blokSayisi }, () => ({
+        ad: "",
+        bodrumSayisi: 0,
+        zeminVarMi: true,
+        ustKatSayisi: 1,
+        katlar: [],
       })),
     });
-    setCurrentStep('blocks');
-  };
+    setAdim("bloklar");
+  }
 
-  const handleBlockSubmit = (blockData: any) => {
-    const updatedBloks = data.bloks?.map((blok, idx) => ({
+  function bloklarGonderildi(cikti: BlockFormCikti) {
+    const guncel = veri.bloklar?.map((blok, i) => ({
       ...blok,
-      name: blockData.blocks[idx]?.name || blok.name,
+      ad: cikti.bloklar[i]?.ad || blok.ad,
     }));
-    setData({ ...data, bloks: updatedBloks });
-    setCurrentStep('floors');
-  };
+    setVeri({ ...veri, bloklar: guncel });
+    setAdim("katlar");
+  }
 
-  const handleFloorSubmit = (floorData: any) => {
-    const updatedBloks = data.bloks?.map((blok, idx) => ({
-      ...blok,
-      floors: floorData.floorData[idx]?.floorCount || blok.floors,
-    }));
-    setData({ ...data, bloks: updatedBloks });
-    setCurrentStep('apartments');
-  };
-
-  const handleApartmentSubmit = async (apartmentData: any) => {
-    const updatedBloks = data.bloks?.map((blok, blockIdx) => {
-      const apartments: number[] = [];
-      for (let floor = 1; floor <= blok.floors!; floor++) {
-        const floorData = apartmentData.apartmentData.find(
-          (a: any) =>
-            a.blockName === blok.name && a.floorNumber === floor
-        );
-        apartments[floor - 1] = floorData?.apartmentCount || 2;
-      }
-      return { ...blok, apartments };
+  function katlarGonderildi(cikti: FloorFormCikti) {
+    const guncel = veri.bloklar?.map((blok, i) => {
+      const ayar = cikti.bloklar[i];
+      return {
+        ...blok,
+        bodrumSayisi: ayar.bodrumSayisi,
+        zeminVarMi: ayar.zeminVarMi,
+        ustKatSayisi: ayar.ustKatSayisi,
+        katlar: katListesiOlustur(ayar.bodrumSayisi, ayar.zeminVarMi, ayar.ustKatSayisi),
+      };
     });
+    setVeri({ ...veri, bloklar: guncel });
+    setAdim("daireler");
+  }
 
-    setData({ ...data, bloks: updatedBloks });
-    await saveToDatabase(updatedBloks);
-  };
-
-  const saveToDatabase = async (bloks: any) => {
-    setLoading(true);
+  async function tamamla(bloklar: OnboardingData["bloklar"]) {
+    setYukleniyor(true);
+    setHata(undefined);
     try {
       const supabase = supabaseTarayici();
       const {
         data: { user },
       } = await supabase.auth.getUser();
+      if (!user) throw new Error("Oturum bulunamadı, lütfen tekrar giriş yapın");
 
-      if (!user) throw new Error('User not authenticated');
+      const payload = bloklar.map((blok) => ({
+        ad: blok.ad,
+        katlar: blok.katlar.map((kat) => ({
+          kat_no: kat.kat_no,
+          daire_sayisi: kat.daire_sayisi,
+          isyeri_sayisi: kat.isyeri_sayisi,
+        })),
+      }));
 
-      // Site oluştur
-      const { data: siteData, error: siteError } = await supabase
-        .from('siteler')
-        .insert({
-          ad: data.siteName,
-          il: data.il,
-          ilce: data.ilce,
-          adres: data.adres,
-          yonetici_id: user.id,
-        })
-        .select()
-        .single();
+      const { error } = await supabase.rpc("site_kur", {
+        p_site_adi: veri.siteAdi,
+        p_il: veri.il,
+        p_ilce: veri.ilce,
+        p_adres: veri.adres,
+        p_bloklar: payload,
+      });
 
-      if (siteError) throw siteError;
+      if (error) throw new Error(error.message);
 
-      // Bloklar oluştur
-      for (const blok of bloks) {
-        const { data: blokData, error: blokError } = await supabase
-          .from('bloklar')
-          .insert({
-            site_id: siteData.id,
-            ad: blok.name,
-          })
-          .select()
-          .single();
-
-        if (blokError) throw blokError;
-
-        // Katlar oluştur
-        for (let floor = 1; floor <= blok.floors; floor++) {
-          const { data: floorData, error: floorError } = await supabase
-            .from('katlar')
-            .insert({
-              blok_id: blokData.id,
-              kat_no: floor,
-            })
-            .select()
-            .single();
-
-          if (floorError) throw floorError;
-
-          // Daireler oluştur
-          const apartmentCount = blok.apartments[floor - 1] || 2;
-          for (let apt = 1; apt <= apartmentCount; apt++) {
-            await supabase.from('daireler').insert({
-              kat_id: floorData.id,
-              daire_no: `${floor}${apt}`,
-              daire_tipi: 'daire',
-              dolu_mu: false,
-            });
-          }
-        }
-      }
-
-      alert('✅ Site başarıyla oluşturuldu!');
-      window.location.href = '/dashboard';
-    } catch (error) {
-      console.error('Database error:', error);
-      alert('❌ Hata: ' + (error as Error).message);
-    } finally {
-      setLoading(false);
+      router.push("/yonetici");
+      router.refresh();
+    } catch (e) {
+      setHata((e as Error).message);
+      setYukleniyor(false);
     }
-  };
+  }
+
+  const ilerlemeYuzdesi = { site: 25, bloklar: 50, katlar: 75, daireler: 100 }[adim];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
-        {/* Progress Bar */}
         <div className="mb-8">
           <div className="flex justify-between mb-2">
-            <span
-              className={`text-sm font-semibold ${
-                currentStep === 'site' ? 'text-green-400' : 'text-gray-400'
-              }`}
-            >
-              Site Bilgileri
-            </span>
-            <span
-              className={`text-sm font-semibold ${
-                currentStep === 'blocks' ? 'text-green-400' : 'text-gray-400'
-              }`}
-            >
-              Bloklar
-            </span>
-            <span
-              className={`text-sm font-semibold ${
-                currentStep === 'floors' ? 'text-green-400' : 'text-gray-400'
-              }`}
-            >
-              Katlar
-            </span>
-            <span
-              className={`text-sm font-semibold ${
-                currentStep === 'apartments'
-                  ? 'text-green-400'
-                  : 'text-gray-400'
-              }`}
-            >
-              Daireler
-            </span>
+            {(["site", "bloklar", "katlar", "daireler"] as Adim[]).map((a) => (
+              <span
+                key={a}
+                className={`text-sm font-semibold ${adim === a ? "text-green-400" : "text-gray-400"}`}
+              >
+                {{ site: "Site Bilgileri", bloklar: "Bloklar", katlar: "Katlar", daireler: "Daireler" }[a]}
+              </span>
+            ))}
           </div>
           <div className="w-full bg-gray-700 h-2 rounded-full overflow-hidden">
             <div
               className="bg-green-500 h-full transition-all duration-300"
-              style={{
-                width:
-                  currentStep === 'site'
-                    ? '25%'
-                    : currentStep === 'blocks'
-                      ? '50%'
-                      : currentStep === 'floors'
-                        ? '75%'
-                        : '100%',
-              }}
+              style={{ width: `${ilerlemeYuzdesi}%` }}
             />
           </div>
         </div>
 
-        {/* Form Container */}
         <div className="bg-white rounded-lg shadow-2xl p-8">
-          {currentStep === 'site' && (
-            <SiteForm onSubmit={handleSiteSubmit} />
-          )}
-          {currentStep === 'blocks' && data.bloks && (
+          {adim === "site" && <SiteForm onSubmit={siteGonderildi} />}
+
+          {adim === "bloklar" && veri.bloklar && (
             <BlockForm
-              blockCount={data.bloks.length}
-              onSubmit={handleBlockSubmit}
-              onBack={() => setCurrentStep('site')}
+              blokSayisi={veri.bloklar.length}
+              onSubmit={bloklarGonderildi}
+              onBack={() => setAdim("site")}
             />
           )}
-          {currentStep === 'floors' && data.bloks && (
+
+          {adim === "katlar" && veri.bloklar && (
             <FloorForm
-              blocks={data.bloks}
-              onSubmit={handleFloorSubmit}
-              onBack={() => setCurrentStep('blocks')}
+              bloklar={veri.bloklar.map((b) => ({ ad: b.ad }))}
+              onSubmit={katlarGonderildi}
+              onBack={() => setAdim("bloklar")}
             />
           )}
-          {currentStep === 'apartments' && data.bloks && (
+
+          {adim === "daireler" && veri.bloklar && (
             <ApartmentForm
-              blocks={data.bloks}
-              onSubmit={handleApartmentSubmit}
-              onBack={() => setCurrentStep('floors')}
-              loading={loading}
+              bloklar={veri.bloklar}
+              onSubmit={tamamla}
+              onBack={() => setAdim("katlar")}
+              loading={yukleniyor}
+              hata={hata}
             />
           )}
         </div>

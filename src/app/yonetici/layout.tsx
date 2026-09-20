@@ -31,7 +31,12 @@ export default async function YoneticiLayout({
     .from("siteler")
     .select("ad")
     .eq("yonetici_id", user!.id)
-    .single();
+    .maybeSingle();
+
+  // Site yöneticisinin henüz sitesi yoksa direkt kuruluma yönlendir
+  if (!site && profil.rol === "site_yoneticisi") {
+    redirect("/onboarding");
+  }
 
   return (
     <div className="flex min-h-screen" style={{ background: "var(--kagit)" }}>
